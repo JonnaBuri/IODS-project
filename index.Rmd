@@ -1,5 +1,6 @@
 ---
 title: "IODS course project"
+author: "Ioanna Bouri"
 output:
   html_document:
     theme: cosmo
