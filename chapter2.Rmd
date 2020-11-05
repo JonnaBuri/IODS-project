@@ -1,13 +1,141 @@
-# Insert chapter 2 title here
+# Week 2
 
-*Describe the work you have done this week and summarize your learning.*
+## Task 1: Reading the data
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
-
+Let's start by reading the data we preprocessed during the wrangling phase:
 ```{r}
-date()
+data <- read.csv(file = "data/andata.csv", header = TRUE)
 ```
 
-Here we go again...
+Let's take look at the shape of the data:
+```{r}
+dim(data)
+```
+
+And their structure:
+```{r}
+str(data)
+```
+
+### Explaining the data
+This data consists of student records, a collection of variables that describe their learning capacities.
+
+- Gender: the gender of each subject
+- Age: the age of each subject
+- Attitude: their global attitude towards statistics
+- Deep: A score that indicates that the student has a **deep** learning approach
+- Stra: A score that indicates that the student has a **strategic** learning approach
+- Surf: A score that indicates that the student has a **surface** learning approach
+- Points: Exam points that the student scored
+
+
+## Task 2: Exploratory data analysis
+
+Let's start by visualizing an overview of the variables:
+```{r}
+library(GGally)
+library(ggplot2)
+
+ggpairs(data, mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)))
+```
+
+Here we can observe an assortment of pairwise scatterplots, densities, and correlation measurements, between pairs of variables.
+We can only observe some correlations that stand out amongst those pairs. For instance, variables **surf** and **deep** seem
+to have some negative correlation (of the magnitude of 0.324). This seems to match our intuition that a student with
+a deeper learning approach, will have a less superficial (**surf**) attitude towards their learning. We can also observe 
+an important correlation between **Attitude** and **Points**. This means that the more positive the learning attitude of the 
+student, the better they seem to perform in their exams.
+
+
+## Task 3: Linear Regression
+
+Let's fit a linear regression model!
+Let's be practical and start with a trial model with all 6 variables first, and then select the 
+3 explanatory variables with highest absolute values of coefficients: this means that
+we will choose the variables that have the biggest weights in the regression, hence are
+the most important ones to be used when predicting exam **Points**.
+```{r}
+lr <- lm(Points ~ deep + stra + surf + gender+ Age + Attitude, data = data)
+summary(lr)
+```
+
+It seems that variables **deep**, **stra** and **surf** are by for the most important 
+ones when trying to predict **Points**. The absolute values of their coefficients are 
+much higher than those of the rest of variables. This means that either they have a positive 
+or a negative effect on the predictions, this effect has the highest weights for these three 
+variables.
+
+Then, next, let's fit the linear regression model with these three variables: **deep, stra and surf**.
+```{r}
+lr <- lm(Points ~ deep + stra + surf, data = data)
+summary(lr)
+```
+Since the explanatory variable **deep** does not have a statistically significant relationship with the target variable, 
+we will remove it from the model and fit the model again without it in the section below.
+
+## Task 4: A closer look at the parameters
+
+Since variable **deep** seems to have a rather high p-value, we can infer
+that it does not relate significantly with the target variable, so let's
+replace it by the **Attitude** variable that has some weight on the regression
+line, and a very low p-value.
+```{r}
+lr <- lm(Points ~  Attitude + stra + surf, data = data)
+summary(lr)
+```
+
+We can infer several things about the parameters of the model from the above summary.
+First of all, we have four parameters with their respective coefficient estimates:
+
+- **Attitude:** 0.337
+- **stra:**     2.761
+- **surf:**    -1.682
+- **Intercept:** 11.007
+
+Now we can observe a multiple R-squared of 20.84% which means that the fitted regression 
+line explains well about 20.84% of the entire sample population. We also observe a p-value
+very close to zero (2.858e-08).
+
+
+## Task 5: Diagnostics
+
+Let's see how we can validate the assumptions of our model.
+
+First of all, what are the assumptions for a linear regression model?
+
+- The errors are normally distributed
+- The errors are independent
+- The errors have a constant variance
+
+
+Using the following diagnostic plots, we will try to validate these assumptions.
+First, the Residuals vs Fitted:
+```{r}
+plot(lr, which = 1)
+```
+
+Using the Residuals vs Fitted plot we can validate that the variance of the errors is constant.
+Indeed, since no particular patterns are identifiable in the above scatter plot, we can infer
+that the variance remains constant throughout the range of fitted values.
+
+
+Then, the Normal Q-Q:
+```{r}
+plot(lr, which = 2)
+```
+
+The normal Q-Q plot helps us validate the normality of the distribution of the errors.
+We can observe that the points fall very close on the line in this plot, hence we are
+able to validate that the errors after fitting this model are indeed normally distributed.
+
+
+
+Finally, the Residuals vs Leverage:
+```{r}
+plot(lr, which = 5)
+```
+
+Here we can examine if there are any outliers in our data that have an imbalanced, high leverage on the regression 
+resutls. But as we can observe in our plot, there is a higher concentration of values on the left side, but there are
+quite few values on the right side as well with higher leverage. Still this seems to be within the variance of the 
+original data distribution, and we don't see any outlying observations with high leverage.

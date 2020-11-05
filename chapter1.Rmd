@@ -1,13 +1,6 @@
 
-# About the project
-
-*Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
-
-# Hello World!
-### First R markdown attempt
-
-# My thoughts about the course
-*I'm very eager to see how this course turns out, mostly because*:
+# Week 1 - My thoughts about the course
+I'm very eager to see how this course turns out, mostly because:
 
 * I'm a doctoral student, specializing on theoretical Machine Learning
 * but I usually work with python - not so fluent in R
@@ -16,18 +9,3 @@
  
 *My github repository link can be found [here](https://github.com/JonnaBuri/IODS-project/)*
 
-*Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
-
-
-
-
-
-
-
-```{r}
-# This is a so-called "R chunk" where you can write R code.
-
-date()
-
-```
-The text continues here.
