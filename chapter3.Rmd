@@ -1,0 +1,124 @@
+---
+title: "Chapter 3"
+author: "Ioanna Bouri"
+output: html_document
+---
+# Week 3
+
+## Task 2: Reading the data
+
+Let's start by reading the data we preprocessed during the wrangling phase:
+
+```{r}
+data <- read.csv(file = "data/w3.csv", header = TRUE)
+```
+
+Let's take look at the shape of the data:
+
+```{r}
+dim(data)
+```
+
+And their variables:
+
+```{r}
+colnames(data)
+```
+
+### Explaining the data
+This data consists of student records in secondary education. We have a collection of variables that includes their grades, as well as social and demographic information.
+The students' performance has been measured in two subjects: Portuguese (language) and Math. The focus of our analysis will be the impact of alcohol consumption levels to the students' learning performance. 
+
+
+## Task 3: Intial hypotheses
+This is no more than a hunch, and it shouldn't be interpreted as anything more than that.
+I would like to initially focus more on variables that could explain a higher level of alcohol consumption. 
+Namely, what are some factors that can lead a young student to higher alcohol consumptions levels?
+For this purpose, here are some variables I would like to investigate:
+
+- **failures**: the number of past class failures might correlate to higher levels of alcohol consumption
+- **goout**: going out with friends more often, might lead to more 'social drinking'
+- **famrel**: the quality of family relationships might be a reason that could facilitate drinking habits
+- **absences**: number of school absences, might correlate with higher levels of alcohol consumption
+
+
+
+## Task 4: Exploratory data analysis
+
+Let's start by visualizing an overview of the variables:
+
+```{r, echo=FALSE}
+library(GGally)
+library(ggplot2)
+mycols <- c("failures", "goout", "famrel", "absences", "alc_use", "high_use")
+ggpairs(data[mycols], mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)))
+```
+
+By plotting these pairwise correlations between the four selected variables, and the variables **alc_use** and **high use**, we can take a closer look into whether these variables actually correlate with higher levels of alcohol consumption. Indeed, we can see that we have significant reasons to believe that three out of the four initial hypotheses might be able to be validated with this data. We can observe a significant correlation between the variables of **failures**, **goout** and **absences**, with the variabe **alc_use**. 
+
+The variable **famrel** seems to have a negative correlation, as expected, meaning that the lower the scoring for family relations, the higher the level of **alc_use**. However, this correlation is not as significant as the other three, and we cannot be certain whether confident conclusions can be drawn from this data regarding this hypothesis.
+
+
+## Task 5: Logistic Regression
+
+Let's fit a logistic regression classifier using the above variables!
+
+```{r}
+lr <- glm(high_use ~ failures + absences + goout + famrel, data = data, family = "binomial")
+summary(lr)
+```
+
+## Interpreting the fitting
+
+It seems that from these four variables, **goout** has the biggest coefficient accompanied with a very high significance, then follow the number of previous class **failures** and the **famrel** with an important coefficient but a lower significance, although still with a p-value less than 0.05. Finally, number of **absences** seems to have the smallest coefficient amongst the four variables we selected.
+
+## The coefficients estimated as odds ratios
+
+```{r, echo=FALSE}
+library(dplyr)
+OR <- coef(lr) %>% exp
+
+# compute confidence intervals (CI)
+CI <- confint(lr) %>% exp
+
+# print out the odds ratios with their confidence intervals
+cbind(OR, CI)
+
+```
+
+These odds ratios essentially mean that, for an OR smaller than 1, i.e. **famrel**, if a student doesn't have this particular variable, then they have a chance of having **high_use** by probability 0.7. Otherwise, if the ORs are larger than 1, i.e. **goout**, it means that if someone has this particular variable, then they are twice as likely to have a **high_use**. These results seem to be on par with our intuition. We also see that the confidence intervals are on par with the estimated p-value we had for each explanatory variable.
+
+## Let's do some feature selection to decide which features are more meaningful
+
+``` {r}
+lr <- glm(high_use ~ school+sex+age+famsize+Pstatus+Medu+Fedu+Mjob+Fjob+reason+nursery+internet+guardian+traveltime+studytime+failures+schoolsup+famsup+paid+activities+higher+romantic+famrel+freetime+goout+health+absences+G1+G2+G3, data = data, family = "binomial")
+summary(lr)
+```
+
+Then let's select the variables with the highest significance: **reason, famrel, goout, absences**.
+
+``` {r}
+lr <- glm(high_use ~ reason+famrel+goout+absences, data = data, family = "binomial")
+summary(lr)
+```
+
+## Task 6: Model evaluation
+
+```{r}
+probabilities <- predict(lr, type = "response")
+
+# add the predicted probabilities to 'alc'
+data <- mutate(data, probability = probabilities)
+
+# use the probabilities to make a prediction of high_use
+data <- mutate(data, prediction = probability > 0.5)
+
+# tabulate the target variable versus the predictions
+table(high_use = data$high_use, prediction = data$prediction)
+
+```
+
+The training error will be: falsepositives + falsenegatives/ #samples = 23 + 66 / 370 = 23.17%
+This is a fairly good accuracy, considering that a dummy classifier would give each class by probability of 0.5. However, in our case, we can see that the distribution of true positives (45) and true negatives (236) is much different, and that a higher probability is assigned on the false class (since the students who don't drink will make up the majority class).
+
+

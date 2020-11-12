@@ -26,6 +26,11 @@ output:
 ```
 
 ***
+  
+```{r child = "chapter3.Rmd"}
+# This will include Chapter 3 (that is updated in its own file) in the document.
+```
 
-(more chapters to be added similarly as we proceed with the course!)
+***
+
 
