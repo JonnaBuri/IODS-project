@@ -1,0 +1,92 @@
+---
+title: "Chapter 5"
+author: "Ioanna Bouri"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Week 5
+
+## Task 1: Exploratory data analysis
+
+```{r}
+library(ggplot2)
+library(GGally)
+
+human <- read.csv("data/human.csv", header=TRUE)
+human <- dplyr::select(human,-X)
+dim(human)
+
+summary(human)
+```
+```{r}
+pairs(human)
+```
+
+We can observe the distributions of the data using the above pairplots and the values from the summary of the variables. We can observe some meaningful correlations already, such as a the GNI correlating positively with life expectancy, expected years of schooling, and negatively correlating with the maternal mortality ratio, and the adolescent birth rate. This observation matches our intuition that a higher GNI correlates with better education, healthcare and overall societal wellbeing.
+
+## Task 2: PCA on non-standardized data
+
+```{r, echo=FALSE}
+pca_human <- prcomp(human)
+
+# draw a biplot of the principal component representation and the original variables
+biplot(pca_human, choices = 1:2, cex = c(0.8, 1), col = c("grey40", "deeppink2"))
+```
+
+```{r, echo=FALSE}
+s <- summary(pca_human)
+
+# rounded percentages of variance captured by each PC
+pca_pr <- round(100*s$importance[2,], digits = 1) 
+
+# print out the percentages of variance
+pca_pr
+```
+
+Before standardizing the data, we can observe that a principal component analysis is not meaningfulat all, and the principal components cannot identify any correlations between the covariates and the GNI. And the difference in the standard deviations of the variables affects their projection on the axis.
+
+## Task 3: Standardization and PCA
+
+```{r}
+
+human_std <- scale(human)
+
+pca_human <- prcomp(human_std)
+
+# draw a biplot of the principal component representation and the original variables
+biplot(pca_human, choices = 1:2, cex = c(0.8, 1), col = c("grey40", "deeppink2"))
+```
+
+
+```{r}
+s <- summary(pca_human)
+
+# rounded percentages of variance captured by each PC
+pca_pr <- round(100*s$importance[2,], digits = 1) 
+
+# print out the percentages of variance
+pca_pr
+```
+
+After normalizing the data, we can see that the we get some interpretable results, the variances of the data are normalized, and we can infer from the arrows correlations amongst the explanatory variables. We also observe that there is higher variability in the PCA after normalizing, since in the first case, 100% of the variance was in the 1st principal component. Variables with arrows that form a small angle, are interpreted to have a higher positive correlation with each other. For example, as we were describing in task 1, we can observe GNI have a high positive correlation with life expectancy and expected years in education, and a negative (since the arrows are pointing the other way) correlation with maternal mortality ratio and adolescent birth rate.
+
+
+## Task 4: Interpreting the results
+
+Just as the direction we were hinting at in task 1, it's rather intuitive why these positive/negative correlations hold. A country with a higher gross national income, means a society with members who lead a more 'comfortable' life. These 'comforts' can mean better healthcare is provided, more people are educated, and/or educated for more years. A higher GNI implies an overall better functioning system, which, at least as the current societal models dictate, can provide best for its people. Of course, this also explains a lower rate of maternal mortality and adolescent birth, since healthcare and education respectively are at high priority.
+
+
+## Task 5: MCA
+
+Bad week for me. I can't get FactoMiner to install to access the data either :(
+
+```{r}
+#install.packages("FactoMineR")
+#library(FactoMineR)
+
+#data("tea")
+```
