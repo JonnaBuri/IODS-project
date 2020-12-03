@@ -1,0 +1,211 @@
+---
+title: "Chapter 6"
+author: "Ioanna Bouri"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Week 6
+
+## Task 1: Analysis on the RATS data
+
+## Individual response profiles by group for the RATS data.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+RATS <- read.csv("data/rats.csv", header=TRUE)
+
+RATS$ID <- factor(RATS$ID)
+RATS$Group <- factor(RATS$Group)
+
+# Draw the plot
+ggplot(RATS, aes(x = time, y = rats, linetype = ID)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(RATS$rats), max(RATS$rats)), name='Observed weight (grams)')
+```
+
+
+## Individual response profiles for RATS data after standardization.
+
+```{r}
+# Standardise the variable rats
+RATS <- RATS %>%
+  group_by(time) %>%
+  mutate(stdrats = (rats - mean(rats))/sd(rats) ) %>%
+  ungroup()
+
+# Glimpse the data
+glimpse(RATS)
+
+# Plot again with the standardised rats
+ggplot(RATS, aes(x = time, y = stdrats, linetype = ID)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  scale_y_continuous(name = "standardized weight (grams)")
+```
+
+We can observe that both the original and standardized versions are rather close to each other for each group. This indicates that probably there are not many outlying values in the data. This plot essentially represents the rats variable (or its standardized version, respectively) over the time of the study, for each different group.
+
+## Mean response profiles for the three groups in the RATS data.
+
+```{r, echo=FALSE}
+# Number of times
+n <- RATS$time %>% unique() %>% length()
+
+# Summary data with mean and standard error of bprs by treatment and week 
+RATSS <- RATS %>%
+  group_by(Group, time) %>%
+  summarise( mean = mean(rats), se = sd(rats)/sqrt(n) ) %>%
+  ungroup()
+
+# Glimpse the data
+glimpse(RATSS)
+
+# Plot the mean profiles
+ggplot(RATSS, aes(x = time, y = mean, linetype = Group, shape = Group)) +
+  geom_line() +
+  scale_linetype_manual(values = c(1,2,3)) +
+  geom_point(size=3) +
+  scale_shape_manual(values = c(1,2,3)) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se, linetype="1"), width=0.3) +
+  theme(legend.position = c(0.8,0.8)) +
+  scale_y_continuous(name = "mean(weight) +/- se(weight)")
+```
+
+We can observe that this plot shows that the behavior of the experiment over time follows a similar pattern for all three groups. Worth mentioning is the difference of the first group, although the pattern is similar with the other two. Also, we can observe that the results from group 2 have greater variance, than what we have observed for groups one and three.
+
+## Boxplots for the RATS data.
+
+```{r, echo=FALSE}
+# Create a summary data by Group and ID with mean as the summary variable
+RATS8S <- RATS %>%
+  filter(time > 0) %>%
+  group_by(Group, ID) %>%
+  summarise( mean=mean(rats) ) %>%
+  ungroup()
+
+# Glimpse the data
+glimpse(RATS8S)
+
+# Draw a boxplot of the mean versus treatment
+ggplot(RATS8S, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(weight), time 1-8")
+```
+
+
+The above observations about the different levels of variance become more evident in the boxplots.
+
+
+## Task 2: Analysis on the BPRS data
+
+## Plot individual BPRS profiles for each treatment group
+
+```{r}
+BPRS <- read.csv("data/bprs.csv", header=TRUE)
+
+BPRS <- BPRS %>%
+  group_by(week) %>%
+  mutate(stdbprs = (bprs - mean(bprs))/sd(bprs) ) %>%
+  ungroup()
+
+BPRS$subject <- factor(BPRS$subject)
+BPRS$treatment <- factor(BPRS$treatment)
+
+ggplot(BPRS, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(BPRS$bprs), max(BPRS$bprs)))
+```
+
+## Fitting the linear model
+
+```{r}
+# create a regression model BPRS_reg
+BPRS_reg <- lm(bprs ~ week + treatment, data = BPRS)
+
+# print out a summary of the model
+summary(BPRS_reg)
+```
+
+## Creating a random intercept model
+```{r}
+# access library lme4
+library(lme4)
+
+# Create a random intercept model
+BPRS_ref <- lmer(bprs ~ week + treatment + (1 | subject), data = BPRS, REML = FALSE)
+
+# Print the summary of the model
+summary(BPRS_ref)
+
+```
+
+## Random intercept and random slope model
+```{r}
+# create a random intercept and random slope model
+BPRS_ref1 <- lmer(bprs ~ week + treatment + (week | subject), data = BPRS, REML = FALSE)
+
+# print a summary of the model
+summary(BPRS_ref1)
+
+# perform an ANOVA test on the two models
+anova(BPRS_ref1, BPRS_ref)
+```
+
+## Model with interaction
+```{r}
+# create a random intercept and random slope model
+BPRS_ref2 <- lmer(bprs ~ week * treatment + (week | subject), data = BPRS, REML = FALSE)
+
+# print a summary of the model
+summary(BPRS_ref2)
+
+# perform an ANOVA test on the two models
+anova(BPRS_ref2, BPRS_ref1)
+
+# draw the plot of BPRS
+ggplot(BPRS, aes(x = week, y = bprs, group = subject)) +
+  #geom_line(aes(linetype = treatment)) +
+  geom_line() +
+  scale_linetype_manual(values = c(1,2)) +
+  geom_point(size=2) +
+  scale_shape_manual(values = c(1,2)) +
+  scale_x_continuous(name = "Week", breaks = seq(0, 60, 20)) +
+  scale_y_continuous(name = "bprs") +
+  theme(legend.position = "top")
+```
+
+
+```{r}
+# Create a vector of the fitted values
+Fitted <- fitted(BPRS_ref2)
+
+# Create a new column fitted to RATSL
+BPRS <- BPRS %>%
+  mutate(Fitted)
+
+# draw the plot of Fitted BPRS
+ggplot(BPRS, aes(x = week, y = Fitted, group = subject)) +
+  #geom_line(aes(linetype = treatment)) +
+  geom_line() +
+  scale_linetype_manual(values = c(1,2)) +
+  geom_point(size=2) +
+  scale_shape_manual(values = c(1,2)) +
+  scale_x_continuous(name = "Week", breaks = seq(0, 60, 20)) +
+  scale_y_continuous(name = "bprs") +
+  theme(legend.position = "top")
+```
